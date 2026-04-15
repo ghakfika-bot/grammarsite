@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import { supabase } from './supabaseClient';
 import { motion, AnimatePresence } from 'motion/react';
+import { QuizBuilder, QuizPlayer } from './Quiz';
 import {
   Home,
   BookOpen,
@@ -512,6 +513,7 @@ export default function App() {
 
 function PlatformLessonsView({ platform, lessons, onBack, onNav, activeSection }: { platform: Platform, lessons: Lesson[], onBack: () => void, onNav: (s: Section) => void, activeSection: Section }) {
   const [activeVideo, setActiveVideo] = useState<Lesson | null>(null);
+  const [quizLesson, setQuizLesson] = useState<Lesson | null>(null);
 
   const getEmbedUrl = (url?: string) => {
     if (!url) return null;
@@ -619,7 +621,10 @@ function PlatformLessonsView({ platform, lessons, onBack, onNav, activeSection }
                     </div>
 
                     <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                      <button className="flex-grow bg-secondary text-white py-4 px-6 rounded-2xl font-bold hover:bg-secondary-dim transition-all shadow-lg shadow-secondary/20 flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => { setActiveVideo(null); setQuizLesson(activeVideo); }}
+                        className="flex-grow bg-secondary text-white py-4 px-6 rounded-2xl font-bold hover:bg-secondary-dim transition-all shadow-lg shadow-secondary/20 flex items-center justify-center gap-2"
+                      >
                         <Zap size={20} />
                         Take Lesson Quiz
                       </button>
@@ -636,6 +641,17 @@ function PlatformLessonsView({ platform, lessons, onBack, onNav, activeSection }
             </div>
           );
         })()}
+      </AnimatePresence>
+
+      {/* Quiz Player */}
+      <AnimatePresence>
+        {quizLesson && (
+          <QuizPlayer
+            lessonId={quizLesson.id}
+            lessonTitle={quizLesson.title}
+            onClose={() => setQuizLesson(null)}
+          />
+        )}
       </AnimatePresence>
       <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-on-surface/5 py-3">
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
@@ -747,7 +763,10 @@ function PlatformLessonsView({ platform, lessons, onBack, onNav, activeSection }
                   <p className="text-on-surface-variant text-lg mb-8 leading-relaxed">
                     {lesson.description}
                   </p>
-                  <button className="w-full bg-secondary text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-secondary-dim transition-all shadow-lg shadow-secondary/20">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setQuizLesson(lesson); }}
+                    className="w-full bg-secondary text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-secondary-dim transition-all shadow-lg shadow-secondary/20"
+                  >
                     Start Quiz
                     <ArrowRight size={20} />
                   </button>
@@ -963,6 +982,7 @@ function getThumbnailFromUrl(url: string): string | null {
 function CreatorDashboard({ lessons, onSave, onLogout }: { lessons: Lesson[], onSave: (l: Lesson[]) => void, onLogout: () => void }) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [quizLessonId, setQuizLessonId] = useState<{ id: string; title: string } | null>(null);
   const [formData, setFormData] = useState<Partial<Lesson>>({
     title: '',
     description: '',
@@ -972,7 +992,7 @@ function CreatorDashboard({ lessons, onSave, onLogout }: { lessons: Lesson[], on
     videoUrl: ''
   });
 
-  const handleVideoUrlChange = (url: string) => {
+  const handleVideoUrlChange = async (url: string) => {
     const autoThumb = getThumbnailFromUrl(url);
     setFormData(prev => ({
       ...prev,
@@ -980,6 +1000,21 @@ function CreatorDashboard({ lessons, onSave, onLogout }: { lessons: Lesson[], on
       // Only auto-fill if user hasn't manually set a thumbnail
       thumbnail: autoThumb || prev.thumbnail || ''
     }));
+
+    // For TikTok, fetch from oEmbed API
+    if (url.includes('tiktok.com') && url.length > 20) {
+      try {
+        const response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.thumbnail_url) {
+            setFormData(prev => ({ ...prev, thumbnail: data.thumbnail_url }));
+          }
+        }
+      } catch (e) {
+        console.warn('TikTok thumbnail fetch failed:', e);
+      }
+    }
   };
 
   // Resolve the active thumbnail to show in the preview
@@ -1080,6 +1115,13 @@ function CreatorDashboard({ lessons, onSave, onLogout }: { lessons: Lesson[], on
                   <div className="flex justify-between items-center pt-4 border-t border-on-surface/5">
                     <span className="text-xs font-bold text-secondary uppercase tracking-widest">{lesson.category}</span>
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => setQuizLessonId({ id: lesson.id, title: lesson.title })}
+                        className="p-2 rounded-xl bg-surface-container-low text-on-surface-variant hover:bg-tertiary-container hover:text-on-tertiary-container transition-all"
+                        title="Edit Quiz"
+                      >
+                        <Zap size={16} />
+                      </button>
                       <button
                         onClick={() => startEdit(lesson)}
                         className="p-2 rounded-xl bg-surface-container-low text-on-surface-variant hover:bg-secondary hover:text-white transition-all"
@@ -1241,6 +1283,17 @@ function CreatorDashboard({ lessons, onSave, onLogout }: { lessons: Lesson[], on
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Quiz Builder */}
+      <AnimatePresence>
+        {quizLessonId && (
+          <QuizBuilder
+            lessonId={quizLessonId.id}
+            lessonTitle={quizLessonId.title}
+            onClose={() => setQuizLessonId(null)}
+          />
         )}
       </AnimatePresence>
     </div>
