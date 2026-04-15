@@ -167,6 +167,20 @@ export default function App() {
     }
   };
 
+  const deleteLesson = async (id: string) => {
+    const updated = localLessons.filter(l => l.id !== id);
+    setLocalLessons(updated);
+
+    const { error } = await supabase
+      .from('lessons')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting lesson from Supabase:', error);
+    }
+  };
+
   const getMergedLessons = (platform: Platform) => {
     const hardcoded = PLATFORM_LESSONS[platform] || [];
     const local = localLessons.filter(l => l.platform === platform);
@@ -211,6 +225,7 @@ export default function App() {
       <CreatorDashboard
         lessons={localLessons}
         onSave={saveLessons}
+        onDelete={deleteLesson}
         onLogout={() => {
           setIsLoggedIn(false);
           setIsCreatorMode(false);
@@ -980,7 +995,7 @@ function getThumbnailFromUrl(url: string): string | null {
   return null;
 }
 
-function CreatorDashboard({ lessons, onSave, onLogout }: { lessons: Lesson[], onSave: (l: Lesson[]) => void, onLogout: () => void }) {
+function CreatorDashboard({ lessons, onSave, onDelete, onLogout }: { lessons: Lesson[], onSave: (l: Lesson[]) => void, onDelete: (id: string) => void, onLogout: () => void }) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [quizLessonId, setQuizLessonId] = useState<{ id: string; title: string } | null>(null);
@@ -1063,7 +1078,7 @@ function CreatorDashboard({ lessons, onSave, onLogout }: { lessons: Lesson[], on
 
   const handleDelete = (id: string) => {
     if (confirm('Are you sure you want to delete this lesson?')) {
-      onSave(lessons.filter(l => l.id !== id));
+      onDelete(id);
     }
   };
 
