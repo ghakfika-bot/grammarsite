@@ -131,7 +131,7 @@ export function QuizBuilder({ lessonId, lessonTitle, onClose }: QuizBuilderProps
     }
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center md:p-6">
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -143,7 +143,7 @@ export function QuizBuilder({ lessonId, lessonTitle, onClose }: QuizBuilderProps
                 initial={{ opacity: 0, y: 50, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 50, scale: 0.9 }}
-                className="bg-white w-full max-w-3xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
+                className="bg-white w-full h-full md:h-auto md:max-w-3xl md:rounded-[3rem] shadow-2xl relative z-10 overflow-hidden flex flex-col md:max-h-[90vh]"
             >
                 {/* Header */}
                 <div className="p-8 border-b border-on-surface/5 flex justify-between items-center shrink-0">
@@ -443,12 +443,12 @@ export function QuizPlayer({ lessonId, lessonTitle, onClose }: QuizPlayerProps) 
     const q = quiz.questions[currentQ];
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center md:p-6">
             <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
+                className="bg-white w-full h-full md:h-auto md:max-w-2xl md:rounded-[3rem] shadow-2xl relative z-10 overflow-hidden flex flex-col md:max-h-[90vh]"
             >
                 {/* Header + Progress */}
                 <div className="p-6 pb-4 shrink-0">
