@@ -541,8 +541,12 @@ function PlatformLessonsView({ platform, lessons, onBack, onNav, activeSection }
       return `${cleanUrl.endsWith('/') ? cleanUrl : cleanUrl + '/'}embed`;
     }
 
-    // TikTok (Simple embed attempt)
+    // TikTok
     if (url.includes('tiktok.com')) {
+      const videoIdMatch = url.match(/\/video\/(\d+)/);
+      if (videoIdMatch && videoIdMatch[1]) {
+        return `https://www.tiktok.com/embed/v2/${videoIdMatch[1]}`;
+      }
       return url;
     }
 
