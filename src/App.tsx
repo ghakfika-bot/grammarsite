@@ -498,16 +498,34 @@ function PlatformLessonsView({ platform, lessons, onBack, onNav, activeSection }
   const getEmbedUrl = (url?: string) => {
     if (!url) return null;
     
-    // YouTube
+    // YouTube (including Shorts)
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      // Handle Shorts
+      if (url.includes('/shorts/')) {
+        const videoId = url.split('/shorts/')[1]?.split(/[?#]/)[0];
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+      }
+      
       const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
       const match = url.match(regExp);
       return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : url;
     }
     
-    // TikTok (Simple embed attempt - TikTok often requires their specific embed script, but we'll try the URL)
+    // Facebook
+    if (url.includes('facebook.com')) {
+      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&width=560`;
+    }
+
+    // Instagram (Reels/Posts)
+    if (url.includes('instagram.com')) {
+      // Instagram embeds usually need /embed at the end
+      const cleanUrl = url.split(/[?#]/)[0];
+      return `${cleanUrl.endsWith('/') ? cleanUrl : cleanUrl + '/'}embed`;
+    }
+    
+    // TikTok (Simple embed attempt)
     if (url.includes('tiktok.com')) {
-      return url; // TikTok usually needs a specific embed block, but we'll provide the link
+      return url; 
     }
 
     return url;
