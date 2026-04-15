@@ -47,56 +47,65 @@ interface Lesson {
 }
 
 const PLATFORM_LESSONS: Record<Platform, Lesson[]> = {
-  YouTube: [
-    {
-      id: 'yt1',
-      title: 'Mastering the Passive Voice',
-      description: 'Learn how to shift focus in your sentences with these simple rules, moving from action-oriented to object-focused narratives.',
-      thumbnail: 'https://picsum.photos/seed/writing/1200/600',
-      duration: '12:45'
-    },
-    {
-      id: 'yt2',
-      title: 'Conditional Clause Fluency',
-      description: 'Navigate "if" and "when" with confidence. A deep dive into the four main conditionals of English grammar.',
-      thumbnail: 'https://picsum.photos/seed/abstract/1200/600',
-      tag: 'NEW LESSON'
-    },
-    {
-      id: 'yt3',
-      title: 'The Art of Semicolons',
-      description: 'Stop fearing the semicolon. Learn how to connect independent thoughts for a more sophisticated writing style.',
-      thumbnail: 'https://picsum.photos/seed/book/1200/600'
-    }
-  ],
-  TikTok: [
-    {
-      id: 'tk1',
-      title: 'Quick Tense Hacks',
-      description: 'Master the present perfect in under 60 seconds with these memory triggers.',
-      thumbnail: 'https://picsum.photos/seed/fast/1200/600',
-      duration: '0:59'
-    }
-  ],
-  Instagram: [
-    {
-      id: 'ig1',
-      title: 'Visual Prepositions',
-      description: 'A visual guide to "in", "on", and "at" through beautiful photography.',
-      thumbnail: 'https://picsum.photos/seed/photo/1200/600',
-      tag: 'VISUAL'
-    }
-  ],
-  Facebook: [
-    {
-      id: 'fb1',
-      title: 'Community Storytelling',
-      description: 'How to use narrative tenses to engage your audience in long-form posts.',
-      thumbnail: 'https://picsum.photos/seed/story/1200/600',
-      duration: '15:20'
-    }
-  ]
+  YouTube: [],
+  TikTok: [],
+  Instagram: [],
+  Facebook: []
 };
+
+const CATEGORY_COLORS: Record<string, string> = {
+  'Grammar': 'from-indigo-600 to-purple-600',
+  'Vocabulary': 'from-emerald-500 to-teal-600',
+  'Pronunciation': 'from-amber-400 to-orange-500',
+  'Writing': 'from-rose-500 to-pink-600',
+  'General': 'from-slate-600 to-slate-800'
+};
+
+function LessonThumbnail({ lesson, index, className }: { lesson: Lesson, index?: number, className?: string }) {
+  const colorClass = CATEGORY_COLORS[lesson.category || 'General'] || CATEGORY_COLORS['General'];
+  const hasImage = lesson.thumbnail && !lesson.thumbnail.includes('placeholder') && !lesson.thumbnail.includes('picsum.photos');
+
+  const PlatformLogo = () => {
+    switch (lesson.platform) {
+      case 'YouTube': return <PlayCircle size={32} fill="white" className="text-red-500" />;
+      case 'TikTok': return <Zap size={32} fill="white" className="text-black" />;
+      case 'Instagram': return <Instagram size={32} className="text-white" />;
+      default: return <MonitorPlay size={32} className="text-white" />;
+    }
+  };
+
+  if (hasImage) {
+    return (
+      <div className={`${className} bg-black flex items-center justify-center overflow-hidden`}>
+        <img
+          src={lesson.thumbnail}
+          alt={lesson.title}
+          className="w-full h-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${className} bg-gradient-to-br ${colorClass} flex flex-col items-center justify-center p-6 text-white overflow-hidden relative group-hover:scale-105 transition-transform duration-700`}>
+      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="bg-white/20 backdrop-blur-md p-4 rounded-3xl mb-4 shadow-xl border border-white/30">
+        <PlatformLogo />
+      </div>
+      <div className="text-center z-10">
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 block mb-1">
+          {lesson.platform} Lesson
+        </span>
+        <span className="text-2xl font-black">
+          #{index !== undefined ? index + 1 : lesson.id.slice(-4)}
+        </span>
+      </div>
+      {/* Decorative background element */}
+      <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl opacity-50" />
+    </div>
+  );
+}
 
 export default function App() {
   const [activeSection, setActiveSection] = useState<Section>('home');
@@ -751,11 +760,10 @@ function PlatformLessonsView({ platform, lessons, onBack, onNav, activeSection }
                   className="relative aspect-video overflow-hidden cursor-pointer"
                   onClick={() => setActiveVideo(lesson)}
                 >
-                  <img
-                    src={lesson.thumbnail}
-                    alt={lesson.title}
+                  <LessonThumbnail
+                    lesson={lesson}
+                    index={idx}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    referrerPolicy="no-referrer"
                   />
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center text-secondary shadow-xl">
@@ -1125,7 +1133,10 @@ function CreatorDashboard({ lessons, onSave, onDelete, onLogout }: { lessons: Le
                 className="bg-white rounded-3xl overflow-hidden shadow-xl border border-on-surface/5 group"
               >
                 <div className="aspect-video relative overflow-hidden">
-                  <img src={lesson.thumbnail} alt={lesson.title} className="w-full h-full object-cover" />
+                  <LessonThumbnail
+                    lesson={lesson}
+                    className="w-full h-full object-cover"
+                  />
                   <div className="absolute top-4 left-4 bg-secondary text-white px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase">
                     {lesson.platform}
                   </div>
