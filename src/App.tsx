@@ -17,7 +17,15 @@ import {
   TrendingUp,
   ArrowRight,
   ArrowLeft,
-  Search
+  Search,
+  Plus,
+  Trash2,
+  Edit,
+  LogOut,
+  Upload,
+  Link as LinkIcon,
+  Save,
+  X
 } from 'lucide-react';
 
 type Section = 'home' | 'lessons' | 'about';
@@ -30,6 +38,9 @@ interface Lesson {
   thumbnail: string;
   tag?: string;
   duration?: string;
+  platform?: Platform;
+  category?: string;
+  videoUrl?: string;
 }
 
 const PLATFORM_LESSONS: Record<Platform, Lesson[]> = {
@@ -88,13 +99,32 @@ export default function App() {
   const [activeSection, setActiveSection] = useState<Section>('home');
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isCreatorMode, setIsCreatorMode] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [localLessons, setLocalLessons] = useState<Lesson[]>([]);
 
   const homeRef = useRef<HTMLElement>(null);
   const lessonsRef = useRef<HTMLElement>(null);
   const aboutRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    // Check for creator route
+    if (window.location.pathname === '/creator') {
+      setIsCreatorMode(true);
+    }
+
+    // Load local lessons
+    const saved = localStorage.getItem('grammarsite_lessons');
+    if (saved) {
+      try {
+        setLocalLessons(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load local lessons', e);
+      }
+    }
+
     const handleScroll = () => {
+      if (isCreatorMode) return;
       setIsScrolled(window.scrollY > 20);
       
       const scrollPosition = window.scrollY + 100;
@@ -110,9 +140,24 @@ export default function App() {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isCreatorMode]);
+
+  const saveLessons = (updated: Lesson[]) => {
+    setLocalLessons(updated);
+    localStorage.setItem('grammarsite_lessons', JSON.stringify(updated));
+  };
+
+  const getMergedLessons = (platform: Platform) => {
+    const hardcoded = PLATFORM_LESSONS[platform] || [];
+    const local = localLessons.filter(l => l.platform === platform);
+    return [...local, ...hardcoded];
+  };
 
   const scrollTo = (section: Section) => {
+    if (isCreatorMode) {
+      window.location.pathname = '/';
+      return;
+    }
     if (selectedPlatform) {
       setSelectedPlatform(null);
       // Small timeout to allow the main view to mount before scrolling
@@ -138,10 +183,28 @@ export default function App() {
     }
   };
 
+  if (isCreatorMode) {
+    if (!isLoggedIn) {
+      return <CreatorLogin onLogin={() => setIsLoggedIn(true)} />;
+    }
+    return (
+      <CreatorDashboard 
+        lessons={localLessons} 
+        onSave={saveLessons} 
+        onLogout={() => {
+          setIsLoggedIn(false);
+          setIsCreatorMode(false);
+          window.history.pushState({}, '', '/');
+        }} 
+      />
+    );
+  }
+
   if (selectedPlatform) {
     return (
       <PlatformLessonsView 
         platform={selectedPlatform} 
+        lessons={getMergedLessons(selectedPlatform)}
         onBack={() => scrollTo('lessons')} 
         onNav={(section) => scrollTo(section)}
         activeSection={activeSection}
@@ -429,8 +492,7 @@ export default function App() {
   );
 }
 
-function PlatformLessonsView({ platform, onBack, onNav, activeSection }: { platform: Platform, onBack: () => void, onNav: (s: Section) => void, activeSection: Section }) {
-  const lessons = PLATFORM_LESSONS[platform];
+function PlatformLessonsView({ platform, lessons, onBack, onNav, activeSection }: { platform: Platform, lessons: Lesson[], onBack: () => void, onNav: (s: Section) => void, activeSection: Section }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -667,6 +729,321 @@ function TeamCard({ image, name, role, bio }: { image: string, name: string, rol
       <p className="text-on-surface-variant text-sm leading-relaxed">
         {bio}
       </p>
+    </div>
+  );
+}
+
+// --- Creator Components ---
+
+function CreatorLogin({ onLogin }: { onLogin: () => void }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (username === 'admin' && password === 'creator123') {
+      onLogin();
+    } else {
+      setError('Invalid credentials. Try admin / creator123');
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-surface-container-low p-6">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-on-surface/5"
+      >
+        <div className="flex flex-col items-center mb-10">
+          <div className="w-16 h-16 bg-secondary/10 rounded-2xl flex items-center justify-center mb-4">
+            <Zap className="text-secondary" size={32} />
+          </div>
+          <h2 className="text-3xl font-extrabold text-on-surface">Creator Hub</h2>
+          <p className="text-on-surface-variant text-sm mt-2">Sign in to manage your lessons</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-bold text-on-surface mb-2 ml-1">Username</label>
+            <input 
+              type="text" 
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-surface-container-low border-none rounded-2xl py-4 px-6 text-on-surface focus:ring-2 focus:ring-secondary/20 transition-all"
+              placeholder="admin"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-on-surface mb-2 ml-1">Password</label>
+            <input 
+              type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-surface-container-low border-none rounded-2xl py-4 px-6 text-on-surface focus:ring-2 focus:ring-secondary/20 transition-all"
+              placeholder="••••••••"
+            />
+          </div>
+          {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
+          <button 
+            type="submit"
+            className="w-full bg-secondary text-white py-4 rounded-2xl font-bold hover:bg-secondary-dim transition-all shadow-lg shadow-secondary/20"
+          >
+            Enter Dashboard
+          </button>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
+function CreatorDashboard({ lessons, onSave, onLogout }: { lessons: Lesson[], onSave: (l: Lesson[]) => void, onLogout: () => void }) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<Partial<Lesson>>({
+    title: '',
+    description: '',
+    platform: 'YouTube',
+    category: 'Grammar',
+    thumbnail: '',
+    videoUrl: ''
+  });
+
+  const handleAdd = () => {
+    const newLesson: Lesson = {
+      id: editingId || Date.now().toString(),
+      title: formData.title || 'Untitled Lesson',
+      description: formData.description || '',
+      platform: (formData.platform as Platform) || 'YouTube',
+      category: formData.category || 'General',
+      thumbnail: formData.thumbnail || `https://picsum.photos/seed/${Date.now()}/1200/600`,
+      videoUrl: formData.videoUrl || '',
+      tag: 'NEW'
+    };
+
+    if (editingId) {
+      onSave(lessons.map(l => l.id === editingId ? newLesson : l));
+    } else {
+      onSave([newLesson, ...lessons]);
+    }
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setFormData({ title: '', description: '', platform: 'YouTube', category: 'Grammar', thumbnail: '', videoUrl: '' });
+    setIsAdding(false);
+    setEditingId(null);
+  };
+
+  const startEdit = (lesson: Lesson) => {
+    setFormData(lesson);
+    setEditingId(lesson.id);
+    setIsAdding(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Are you sure you want to delete this lesson?')) {
+      onSave(lessons.filter(l => l.id !== id));
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-surface-container-low flex flex-col">
+      <header className="bg-white border-b border-on-surface/5 py-4 px-8 flex justify-between items-center sticky top-0 z-50">
+        <div className="flex items-center gap-3">
+          <BookOpen className="text-secondary w-8 h-8" />
+          <h1 className="text-xl font-extrabold text-on-surface tracking-tight">Creator Dashboard</h1>
+        </div>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setIsAdding(true)}
+            className="bg-secondary text-white px-6 py-2 rounded-full font-bold flex items-center gap-2 hover:bg-secondary-dim transition-all shadow-lg shadow-secondary/20"
+          >
+            <Plus size={18} />
+            Add Content
+          </button>
+          <button 
+            onClick={onLogout}
+            className="text-on-surface-variant hover:text-red-500 transition-colors p-2"
+            title="Logout"
+          >
+            <LogOut size={20} />
+          </button>
+        </div>
+      </header>
+
+      <main className="flex-grow p-8 max-w-6xl mx-auto w-full">
+        <div className="mb-10">
+          <h2 className="text-3xl font-black text-on-surface mb-2">My Content</h2>
+          <p className="text-on-surface-variant">Manage your fluid grammar lessons across all platforms.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <AnimatePresence>
+            {lessons.map((lesson) => (
+              <motion.div 
+                key={lesson.id}
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="bg-white rounded-3xl overflow-hidden shadow-xl border border-on-surface/5 group"
+              >
+                <div className="aspect-video relative overflow-hidden">
+                  <img src={lesson.thumbnail} alt={lesson.title} className="w-full h-full object-cover" />
+                  <div className="absolute top-4 left-4 bg-secondary text-white px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase">
+                    {lesson.platform}
+                  </div>
+                </div>
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-on-surface mb-2 line-clamp-1">{lesson.title}</h3>
+                  <p className="text-on-surface-variant text-sm mb-6 line-clamp-2">{lesson.description}</p>
+                  <div className="flex justify-between items-center pt-4 border-t border-on-surface/5">
+                    <span className="text-xs font-bold text-secondary uppercase tracking-widest">{lesson.category}</span>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => startEdit(lesson)}
+                        className="p-2 rounded-xl bg-surface-container-low text-on-surface-variant hover:bg-secondary hover:text-white transition-all"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(lesson.id)}
+                        className="p-2 rounded-xl bg-surface-container-low text-on-surface-variant hover:bg-red-500 hover:text-white transition-all"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {lessons.length === 0 && !isAdding && (
+            <div className="col-span-full py-20 flex flex-col items-center justify-center text-on-surface-variant opacity-50">
+              <PlayCircle size={64} className="mb-4" />
+              <p className="text-xl font-bold">No content yet. Click "Add Content" to start.</p>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Add/Edit Modal */}
+      <AnimatePresence>
+        {isAdding && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={resetForm}
+              className="absolute inset-0 bg-on-surface/20 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.9 }}
+              className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="p-8 border-b border-on-surface/5 flex justify-between items-center">
+                <h3 className="text-2xl font-black text-on-surface">{editingId ? 'Edit Lesson' : 'Add New Lesson'}</h3>
+                <button onClick={resetForm} className="p-2 hover:bg-surface-container-low rounded-full transition-colors">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="p-8 overflow-y-auto space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-bold text-on-surface mb-2">Lesson Title</label>
+                    <input 
+                      type="text" 
+                      value={formData.title}
+                      onChange={(e) => setFormData({...formData, title: e.target.value})}
+                      className="w-full bg-surface-container-low border-none rounded-2xl py-4 px-6 text-on-surface focus:ring-2 focus:ring-secondary/20 transition-all"
+                      placeholder="e.g. Mastering the Present Perfect"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-on-surface mb-2">Platform</label>
+                    <select 
+                      value={formData.platform}
+                      onChange={(e) => setFormData({...formData, platform: e.target.value as Platform})}
+                      className="w-full bg-surface-container-low border-none rounded-2xl py-4 px-6 text-on-surface focus:ring-2 focus:ring-secondary/20 transition-all appearance-none"
+                    >
+                      <option value="YouTube">YouTube</option>
+                      <option value="TikTok">TikTok</option>
+                      <option value="Instagram">Instagram</option>
+                      <option value="Facebook">Facebook</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-on-surface mb-2">Category</label>
+                    <input 
+                      type="text" 
+                      value={formData.category}
+                      onChange={(e) => setFormData({...formData, category: e.target.value})}
+                      className="w-full bg-surface-container-low border-none rounded-2xl py-4 px-6 text-on-surface focus:ring-2 focus:ring-secondary/20 transition-all"
+                      placeholder="e.g. Grammar, Vocabulary"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-sm font-bold text-on-surface mb-2">Description</label>
+                    <textarea 
+                      value={formData.description}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      className="w-full bg-surface-container-low border-none rounded-2xl py-4 px-6 text-on-surface focus:ring-2 focus:ring-secondary/20 transition-all h-32 resize-none"
+                      placeholder="Describe the lesson content..."
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-sm font-bold text-on-surface mb-2">Video Link / Embed URL</label>
+                    <div className="flex gap-3">
+                      <div className="flex-grow relative">
+                        <LinkIcon className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant" size={18} />
+                        <input 
+                          type="text" 
+                          value={formData.videoUrl}
+                          onChange={(e) => setFormData({...formData, videoUrl: e.target.value})}
+                          className="w-full bg-surface-container-low border-none rounded-2xl py-4 pl-14 pr-6 text-on-surface focus:ring-2 focus:ring-secondary/20 transition-all"
+                          placeholder="https://youtube.com/..."
+                        />
+                      </div>
+                      <button className="bg-surface-container-low text-on-surface-variant p-4 rounded-2xl hover:bg-secondary hover:text-white transition-all flex items-center gap-2 font-bold text-sm">
+                        <Upload size={18} />
+                        Upload
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-on-surface-variant mt-2 ml-2 italic">* File uploads are simulated in local mode. Use URLs for real embeds.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8 border-t border-on-surface/5 flex gap-4">
+                <button 
+                  onClick={resetForm}
+                  className="flex-1 bg-surface-container-low text-on-surface-variant py-4 rounded-2xl font-bold hover:bg-on-surface/5 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleAdd}
+                  className="flex-1 bg-secondary text-white py-4 rounded-2xl font-bold hover:bg-secondary-dim transition-all shadow-lg shadow-secondary/20 flex items-center justify-center gap-2"
+                >
+                  <Save size={20} />
+                  {editingId ? 'Update Lesson' : 'Publish Lesson'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
