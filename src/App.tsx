@@ -774,11 +774,11 @@ function PlatformLessonsView({ platform, lessons, hasQuizIds, onBack, onNav, act
 
                   {/* Quiz Badge */}
                   <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-xl text-[10px] font-black tracking-widest uppercase flex items-center gap-1.5 z-20 ${hasQuizIds.has(lesson.id)
-                      ? 'bg-amber-400 text-amber-950 shadow-lg shadow-amber-400/20'
-                      : 'bg-black/40 backdrop-blur-md text-white/70'
+                    ? 'bg-amber-400 text-amber-950 shadow-lg shadow-amber-400/20'
+                    : 'bg-black/40 backdrop-blur-md text-white/70'
                     }`}>
                     <Zap size={10} fill={hasQuizIds.has(lesson.id) ? "currentColor" : "none"} />
-                    {hasQuizIds.has(lesson.id) ? 'Quiz Ready' : 'App Only'}
+                    {hasQuizIds.has(lesson.id) ? 'Quiz Ready' : 'Video Lesson'}
                   </div>
                   {lesson.duration && (
                     <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-bold">
