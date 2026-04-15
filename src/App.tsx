@@ -493,9 +493,97 @@ export default function App() {
 }
 
 function PlatformLessonsView({ platform, lessons, onBack, onNav, activeSection }: { platform: Platform, lessons: Lesson[], onBack: () => void, onNav: (s: Section) => void, activeSection: Section }) {
+  const [activeVideo, setActiveVideo] = useState<Lesson | null>(null);
+
+  const getEmbedUrl = (url?: string) => {
+    if (!url) return null;
+    
+    // YouTube
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : url;
+    }
+    
+    // TikTok (Simple embed attempt - TikTok often requires their specific embed script, but we'll try the URL)
+    if (url.includes('tiktok.com')) {
+      return url; // TikTok usually needs a specific embed block, but we'll provide the link
+    }
+
+    return url;
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      {/* Video Modal */}
+      <AnimatePresence>
+        {activeVideo && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setActiveVideo(null)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-5xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col"
+            >
+              <div className="p-6 border-b border-on-surface/5 flex justify-between items-center bg-white">
+                <div>
+                  <h3 className="text-xl font-bold text-on-surface">{activeVideo.title}</h3>
+                  <p className="text-xs text-on-surface-variant font-medium uppercase tracking-widest mt-1">{activeVideo.platform} • {activeVideo.category || 'Lesson'}</p>
+                </div>
+                <button 
+                  onClick={() => setActiveVideo(null)}
+                  className="p-2 hover:bg-surface-container-low rounded-full transition-colors text-on-surface-variant"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              
+              <div className="aspect-video bg-black relative">
+                {activeVideo.videoUrl ? (
+                  <iframe 
+                    src={getEmbedUrl(activeVideo.videoUrl) || ''}
+                    className="w-full h-full border-none"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={activeVideo.title}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50 p-10 text-center">
+                    <MonitorPlay size={64} className="mb-4 opacity-20" />
+                    <p className="text-xl font-bold">No Video URL Provided</p>
+                    <p className="text-sm opacity-60 mt-2">The creator hasn't attached a playable link to this lesson yet.</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-8 bg-surface-container-low">
+                <p className="text-on-surface-variant leading-relaxed">
+                  {activeVideo.description}
+                </p>
+                <div className="mt-8 flex gap-4">
+                  <button className="flex-1 bg-secondary text-white py-4 rounded-2xl font-bold hover:bg-secondary-dim transition-all shadow-lg shadow-secondary/20 flex items-center justify-center gap-2">
+                    <Zap size={20} />
+                    Take Lesson Quiz
+                  </button>
+                  <button 
+                    onClick={() => setActiveVideo(null)}
+                    className="px-8 bg-white text-on-surface-variant py-4 rounded-2xl font-bold hover:bg-on-surface/5 transition-all border border-on-surface/5"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-on-surface/5 py-3">
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-3 cursor-pointer" onClick={onBack}>
@@ -574,7 +662,10 @@ function PlatformLessonsView({ platform, lessons, onBack, onNav, activeSection }
                 transition={{ delay: idx * 0.1 }}
                 className="bg-white rounded-[2rem] overflow-hidden shadow-2xl shadow-on-surface/5 border border-on-surface/5 group"
               >
-                <div className="relative aspect-video overflow-hidden">
+                <div 
+                  className="relative aspect-video overflow-hidden cursor-pointer"
+                  onClick={() => setActiveVideo(lesson)}
+                >
                   <img 
                     src={lesson.thumbnail} 
                     alt={lesson.title} 
